@@ -1,23 +1,45 @@
-require('dotenv').config({ path: "/home/ubuntu/.env" });
-
+const fs = require("fs");
+const path = require("path");
 const mysql = require("mysql2/promise");
 
-const connection = mysql.createPool({
-	host: process.env.DB_HOST,
-	user: process.env.DB_USER,
-	password: process.env.DB_PASSWORD,
-	database: "main",
-	flags: "-FOUND_ROWS",
-	charset: "utf8mb4_0900_ai_ci",
-	multipleStatements: true,
-	connectionLimit: 10,
-	queueLimit: 0,
-	timezone: "+00:00"
-});
+class Database {
+	constructor(){
+		if (fs.existsSync(`${path.dirname(require.main.filename)}${path.sep}database.json`)) throw `ERROR: No 'database.json' file found in root directory (${`${path.dirname(require.main.filename)}${path.sep}database.json`}).`;
+		
+		this.config = JSON.parse(fs.readFileSync(`${path.dirname(require.main.filename)}${path.sep}database.json`));
 
-connection.searchQuery = (q, c, t = "AND") => {
-	const qw = q.split(' ').filter(x => x.length).map(x => `%${x}%`);
-	return [`(${qw.map((x) => `${c} LIKE ?`).join(` ${t} `)})`, qw];
-};
+		this.source = null;
+		this.targets = [];
+		for (const settings of this.config.databases){
+			const label = settings.label;
+			const type = settings.type;
 
-module.exports = connection;
+			delete settings.label;
+			delete settings.type;
+
+			const connection = mysql.createPool(settings);
+			connection.label = label;
+
+			if (type == "source"){
+				this.source = connection;
+			}else if (type = "target"){
+				this.targets.push(connection);
+			}
+		}
+	}
+
+	query(query, parameters = []){
+		for (const target of this.targets){
+			target.query(query, parameters).catch(error => { console.log(`TARGET ERROR: ${output.label}`); console.log(error); });
+		}
+
+		return this.source.query(query, parameters);
+	}
+
+	searchQuery(q, c, t = "AND"){
+		const qw = q.split(' ').filter(x => x.length).map(x => `%${x}%`);
+		return [`(${qw.map((x) => `${c} LIKE ?`).join(` ${t} `)})`, qw];
+	}
+}
+
+module.exports = new Database();
