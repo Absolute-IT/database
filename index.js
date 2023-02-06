@@ -4,9 +4,11 @@ const mysql = require("mysql2/promise");
 
 class Database {
 	constructor(){
-		if (fs.existsSync(`${path.dirname(require.main.filename)}${path.sep}database.json`)) throw `ERROR: No 'database.json' file found in root directory (${`${path.dirname(require.main.filename)}${path.sep}database.json`}).`;
+		const filePath = `${path.dirname(require.main.filename)}${path.sep}database.json`;
+
+		if (!fs.existsSync(filePath)) throw `ERROR: No 'database.json' file found in root directory (${filePath}).`;
 		
-		this.config = JSON.parse(fs.readFileSync(`${path.dirname(require.main.filename)}${path.sep}database.json`));
+		this.config = JSON.parse(fs.readFileSync(filePath));
 
 		this.source = null;
 		this.targets = [];
