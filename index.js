@@ -24,7 +24,7 @@ class Database {
 
 			if (type == "source"){
 				this.source = connection;
-			}else if (type = "target"){
+			}else if (type == "target"){
 				this.targets.push(connection);
 			}
 		}
