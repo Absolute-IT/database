@@ -32,7 +32,7 @@ class Database {
 
 	query(query, parameters = []){
 		for (const target of this.targets){
-			target.query(query, parameters).catch(error => { console.log(`TARGET ERROR: ${output.label}`); console.log(error); });
+			target.query(query, parameters).catch(error => { console.log(`TARGET ERROR: ${target.label}`); console.log(error); });
 		}
 
 		return this.source.query(query, parameters);
