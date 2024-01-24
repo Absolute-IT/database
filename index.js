@@ -1,47 +1,54 @@
-const fs = require("fs");
-const path = require("path");
-const mysql = require("mysql2/promise");
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, sep } from "path";
+import { createPool } from "mysql2/promise";
 
 class Database {
-	constructor(){
-		const filePath = `${path.dirname(require.main.filename)}${path.sep}database.json`;
+  constructor() {
+    const filePath = `${dirname(require.main.filename)}${sep}database.json`;
 
-		if (!fs.existsSync(filePath)) throw `ERROR: No 'database.json' file found in root directory (${filePath}).`;
-		
-		this.config = JSON.parse(fs.readFileSync(filePath));
+    if (!existsSync(filePath))
+      throw `ERROR: No 'database.json' file found in root directory (${filePath}).`;
 
-		this.source = null;
-		this.targets = [];
-		for (const settings of this.config.databases){
-			const label = settings.label;
-			const type = settings.type;
+    this.config = JSON.parse(readFileSync(filePath));
 
-			delete settings.label;
-			delete settings.type;
+    this.source = null;
+    this.targets = [];
+    for (const settings of this.config.databases) {
+      const label = settings.label;
+      const type = settings.type;
 
-			const connection = mysql.createPool(settings);
-			connection.label = label;
+      delete settings.label;
+      delete settings.type;
 
-			if (type == "source"){
-				this.source = connection;
-			}else if (type == "target"){
-				this.targets.push(connection);
-			}
-		}
-	}
+      const connection = createPool(settings);
+      connection.label = label;
 
-	query(query, parameters = []){
-		for (const target of this.targets){
-			target.query(query, parameters).catch(error => { console.log(`TARGET ERROR: ${target.label}`); console.log(error); });
-		}
+      if (type == "source") {
+        this.source = connection;
+      } else if (type == "target") {
+        this.targets.push(connection);
+      }
+    }
+  }
 
-		return this.source.query(query, parameters);
-	}
+  query(query, parameters = []) {
+    for (const target of this.targets) {
+      target.query(query, parameters).catch((error) => {
+        console.log(`TARGET ERROR: ${target.label}`);
+        console.log(error);
+      });
+    }
 
-	searchQuery(q, c, t = "AND"){
-		const qw = q.split(' ').filter(x => x.length).map(x => `%${x}%`);
-		return [`(${qw.map((x) => `${c} LIKE ?`).join(` ${t} `)})`, qw];
-	}
+    return this.source.query(query, parameters);
+  }
+
+  searchQuery(q, c, t = "AND") {
+    const qw = q
+      .split(" ")
+      .filter((x) => x.length)
+      .map((x) => `%${x}%`);
+    return [`(${qw.map((x) => `${c} LIKE ?`).join(` ${t} `)})`, qw];
+  }
 }
 
-module.exports = new Database();
+export default new Database();
