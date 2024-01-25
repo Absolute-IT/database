@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, sep } from "path";
 import { createPool } from "mysql2/promise";
 
+// TODO: base on future planing decide if this should have middle layers to manipulate database through API.
+
 class Database {
   constructor() {
     const filePath = `${dirname(require.main.filename)}${sep}database.json`;
